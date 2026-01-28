@@ -1,0 +1,42 @@
+name = "runna-intervals-converter"
+main = "src/index.py"
+compatibility_date = "2024-01-01"
+
+# Environment variables
+[env.production]
+vars = { LOG_LEVEL = "INFO", LOG_JSON = "true" }
+
+# Secrets (set these using wrangler secret put)
+# - ICS_URL: Your Runna calendar ICS URL
+# - OUTPUT_PATH: (Optional) Output file path
+
+# Cron triggers for scheduled execution
+[triggers]
+crons = ["0 2 * * *"]  # Run daily at 2 AM UTC
+
+# Alternative cron schedules:
+# Every 6 hours: "0 */6 * * *"
+# Every day at midnight: "0 0 * * *"
+# Every Monday at 3 AM: "0 3 * * 1"
+# Every hour: "0 * * * *"
+
+# KV namespace for storing output (optional)
+# [[kv_namespaces]]
+# binding = "WORKOUTS"
+# id = "your-kv-namespace-id"
+
+# Durable Objects (if needed for state management)
+# [[durable_objects.bindings]]
+# name = "WORKOUT_STATE"
+# class_name = "WorkoutState"
+
+# Routes (if you want HTTP access)
+# routes = [
+#   { pattern = "runna-converter.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+# Compatibility flags
+compatibility_flags = []
+
+# Worker limits
+limits = { cpu_ms = 50000 }
