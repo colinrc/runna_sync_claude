@@ -379,6 +379,128 @@ class RunnaWorkoutConverter:
         self.logger.debug("Using default intensity", level=2)
         return 2
     
+    def parse_pace(self, text: str) -> Optional[float]:
+        """
+        Parse pace from text (e.g., "4:50/km" -> 290 seconds per km)
+        
+        Args:
+            text: Text containing pace (e.g., "1km at 4:50/km")
+            
+        Returns:
+            Pace in seconds per km, or None if not found
+        """
+        # Pattern: 4:50/km or 4:50 /km or 4:50/k
+        pace_pattern = r'(\d+):(\d+)\s*/?k(?:m)?'
+        match = re.search(pace_pattern, text)
+        
+        if match:
+            minutes = int(match.group(1))
+            seconds = int(match.group(2))
+            pace_seconds = minutes * 60 + seconds
+            self.logger.debug("Parsed pace", text=text, pace_seconds=pace_seconds)
+            return float(pace_seconds)
+        
+        return None
+    
+    def pace_to_zone_range(self, pace_seconds: float) -> tuple:
+        """
+        Convert pace to zone range for recovery/easy efforts
+        Returns tuple of (min_pace, max_pace) in seconds per km
+        
+        For Z1 (recovery): add 1:00-2:30 to target pace
+        For Z2-Z3 (easy-moderate): subtract 0:30, add 2:30 to target pace
+        """
+        # Z1: slow recovery (add 1:00 to 2:30)
+        z1_min = pace_seconds + 60
+        z1_max = pace_seconds + 150
+        
+        # Z2-Z3: easy to moderate (subtract 0:30, add 2:30)
+        z2_z3_min = max(pace_seconds - 30, pace_seconds * 0.9)
+        z2_z3_max = pace_seconds + 150
+        
+        return (z1_min, z1_max, z2_z3_min, z2_z3_max)
+    
+    def format_pace(self, seconds: float) -> str:
+        """
+        Format pace in seconds to MM:SS format
+        
+        Args:
+            seconds: Pace in seconds per km
+            
+        Returns:
+            Formatted pace string (e.g., "4:50")
+        """
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes}:{secs:02d}"
+    
+    def create_pace_target(self, pace_seconds: Optional[float], is_recovery: bool = False, 
+                          is_easy: bool = False) -> Dict[str, Any]:
+        """
+        Create pace target for intervals.icu
+        
+        Args:
+            pace_seconds: Target pace in seconds per km
+            is_recovery: If true, use Z1 recovery range
+            is_easy: If true, use Z1-Z3 easy range
+            
+        Returns:
+            Target dictionary with pace info
+        """
+        if pace_seconds is None:
+            # No specific pace, use zone-based
+            if is_recovery:
+                return {
+                    'targetType': 'pace',
+                    'pace': None,
+                    'paceType': 'zone',
+                    'zone': 1
+                }
+            elif is_easy:
+                return {
+                    'targetType': 'pace', 
+                    'pace': None,
+                    'paceType': 'zone',
+                    'zone': 2
+                }
+            else:
+                return {
+                    'targetType': 'pace',
+                    'pace': None,
+                    'paceType': 'zone',
+                    'zone': 3
+                }
+        
+        # Have specific pace
+        if is_recovery:
+            # Z1 recovery range
+            z1_min, z1_max, _, _ = self.pace_to_zone_range(pace_seconds)
+            return {
+                'targetType': 'pace',
+                'pace': pace_seconds,
+                'paceMin': z1_min,
+                'paceMax': z1_max,
+                'paceType': 'range'
+            }
+        elif is_easy:
+            # Z1-Z3 easy range
+            _, _, z2_z3_min, z2_z3_max = self.pace_to_zone_range(pace_seconds)
+            return {
+                'targetType': 'pace',
+                'pace': None,
+                'paceMin': z2_z3_min,
+                'paceMax': z2_z3_max,
+                'paceType': 'range'
+            }
+        else:
+            # Specific pace target
+            return {
+                'targetType': 'pace',
+                'pace': pace_seconds,
+                'paceType': 'target'
+            }
+
+    
     def parse_workout_description(self, description: str, summary: str) -> List[Dict[str, Any]]:
         """
         Parse workout description into intervals
@@ -423,6 +545,7 @@ class RunnaWorkoutConverter:
                 duration = self.parse_duration(part) if 'min' in part or 'hour' in part else 0
                 distance = self.parse_distance(part) if 'km' in part or 'm' in part or 'k ' in part else 0
                 intensity = self.extract_intensity(part)
+                pace = self.parse_pace(part)  # Extract actual pace
                 
                 if 'recovery' in part.lower() or 'rest' in part.lower():
                     interval_type = 'recovery'
@@ -435,6 +558,7 @@ class RunnaWorkoutConverter:
                     'duration': duration,
                     'distance': distance,
                     'intensity': intensity,
+                    'pace': pace,  # Store parsed pace
                     'type': interval_type,
                     'text': part
                 })
@@ -452,6 +576,7 @@ class RunnaWorkoutConverter:
                     'duration': duration,
                     'distance': 0,
                     'intensity': 1,
+                    'pace': None,
                     'type': 'warmup',
                     'text': 'Warm up'
                 })
@@ -459,11 +584,13 @@ class RunnaWorkoutConverter:
             # Main work
             main_intensity = self.extract_intensity(text)
             main_duration = self.parse_duration(summary) if 'min' in summary else 1800
+            main_pace = self.parse_pace(text)
             intervals.append({
                 'repeat': 1,
                 'duration': main_duration,
                 'distance': 0,
                 'intensity': main_intensity,
+                'pace': main_pace,
                 'type': 'work',
                 'text': summary
             })
@@ -477,6 +604,7 @@ class RunnaWorkoutConverter:
                     'duration': duration,
                     'distance': 0,
                     'intensity': 1,
+                    'pace': None,
                     'type': 'cooldown',
                     'text': 'Cool down'
                 })
@@ -518,31 +646,51 @@ class RunnaWorkoutConverter:
                 'steps': []
             }
             
+            # Determine if recovery or easy
+            is_recovery = interval['type'] == 'recovery' or 'recovery' in interval['text'].lower() or 'rest' in interval['text'].lower()
+            is_easy = interval['type'] in ['warmup', 'cooldown'] or 'easy' in interval['text'].lower() or 'conversational' in interval['text'].lower()
+            
+            # Create pace target
+            pace_target = self.create_pace_target(interval.get('pace'), is_recovery=is_recovery, is_easy=is_easy)
+            
+            # Build text description with pace
+            if interval.get('pace'):
+                pace_str = self.format_pace(interval['pace'])
+                if is_recovery:
+                    # Calculate recovery range
+                    z1_min, z1_max, _, _ = self.pace_to_zone_range(interval['pace'])
+                    text = f"{interval['text']} ({pace_str}-{self.format_pace(z1_max)}/km Z1)"
+                elif is_easy:
+                    # Calculate easy range
+                    _, _, z2_z3_min, z2_z3_max = self.pace_to_zone_range(interval['pace'])
+                    text = f"{interval['text']} ({self.format_pace(z2_z3_min)}-{self.format_pace(z2_z3_max)}/km Z1-Z3)"
+                else:
+                    text = f"{interval['text']} ({pace_str}/km)"
+            else:
+                text = interval['text']
+            
             # Determine step type
             if interval['duration'] > 0:
                 step_data = {
                     'duration': interval['duration'],
                     'durationType': 'time',
-                    'targetType': 'pace',
-                    'target': interval['intensity'],
-                    'text': interval['text']
+                    **pace_target,
+                    'text': text
                 }
             elif interval['distance'] > 0:
                 step_data = {
                     'distance': interval['distance'],
                     'durationType': 'distance',
-                    'targetType': 'pace',
-                    'target': interval['intensity'],
-                    'text': interval['text']
+                    **pace_target,
+                    'text': text
                 }
             else:
                 # Default to time-based
                 step_data = {
                     'duration': 1800,
                     'durationType': 'time',
-                    'targetType': 'pace',
-                    'target': interval['intensity'],
-                    'text': interval['text']
+                    **pace_target,
+                    'text': text
                 }
             
             if interval['repeat'] > 1:

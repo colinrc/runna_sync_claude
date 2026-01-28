@@ -137,24 +137,43 @@ The converter intelligently parses Runna workout descriptions into structured in
 2.2km cool down
 ```
 
-**Converted to intervals.icu:**
-- 3km warm-up (easy)
-- 3 × (15s fast + 20s recovery)
-- 90s rest
-- 4 × (1km @ threshold + 200m @ interval + 2min rest)
-- 2.2km cool-down (easy)
+**Converted to intervals.icu (with pace targets):**
+- 3km warm-up @ Z1-Z3 (5:37-8:33/km)
+- 3 × (15s fast @ 4:20/km + 20s recovery)
+- 90s rest @ Z1 (5:50-8:33/km)
+- 4 × (1km @ 4:50/km + 200m @ 4:20/km + 120s rest @ Z1)
+- 2.2km cool-down @ Z1-Z3 (4:20-7:20/km)
 
-### Intensity Mapping
+### Pace Target System
 
-| Intensity | Description | Examples |
-|-----------|-------------|----------|
-| 1 | Easy/Recovery | Conversational pace, warm-up, cool-down |
-| 2 | Moderate | Steady aerobic |
-| 3 | Steady | Long run pace |
-| 4 | Tempo | Marathon pace, tempo |
-| 5 | Threshold | Half marathon pace, threshold |
-| 6 | Interval | 10K pace, intervals |
-| 7 | VO2max | 5K pace, hard efforts |
+The converter uses **pace targets** instead of perceived effort zones:
+
+**Specific Pace Workouts:**
+```
+Runna: "1km at 4:50/km"
+→ intervals.icu: 1km @ 4:50/km (290 sec/km target pace)
+```
+
+**Recovery/Rest Periods:**
+- Calculated as Z1 recovery range (adds 1:00-2:30 to workout pace)
+```
+Runna: "120s walking rest" (after 4:50/km work)
+→ intervals.icu: 120s Z1 @ 5:50-7:20/km (~0.26km)
+```
+
+**Warm-up/Cool-down:**
+- Calculated as Z1-Z3 easy range (±0:30 to +2:30 from workout pace)
+```
+Runna: "3km warm up at conversational pace"
+→ intervals.icu: 3km Z1-Z3 @ 4:20-7:20/km
+```
+
+| Workout Type | Runna Description | intervals.icu Output |
+|--------------|-------------------|---------------------|
+| Work Interval | "1km at 4:50/km" | 1km @ 4:50/km target |
+| Recovery | "120s rest" | 120s Z1 range (calculated) |
+| Easy/Warmup | "3km easy" | 3km Z1-Z3 range (calculated) |
+| Fast Burst | "15s fast" | 15s @ specific pace |
 
 ## 🔐 Configuration
 

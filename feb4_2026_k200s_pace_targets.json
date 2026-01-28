@@ -1,0 +1,91 @@
+{
+  "name": "K200s • 10km",
+  "description": "Intervals • 10km • 1h0m - 1h10m\n\n3km warm up at a conversational pace, add 3x 15s fast bursts towards the end of your warm up jog to inject some pace into your legs before the main session!, 90s walking rest\n\n4 reps of:\n• 1km at 4:50/km\n• 200m at 4:20/km, 120s walking rest\n\n2.2km cool down at a conversational pace (or slower!)\n\n📲 View in the Runna app: https://club.runna.com/n9Tx/workout?dayId=9a4b98b5-5f8b-42f0-9f01-a171f350312d_plan_week_8_INTERVALS_0&weekIndex=8",
+  "workout_date": "2026-02-04",
+  "steps": [
+    {
+      "distance": 3000,
+      "durationType": "distance",
+      "targetType": "pace",
+      "pace": null,
+      "paceMin": 337,
+      "paceMax": 513,
+      "paceType": "range",
+      "text": "3km warm up at conversational pace (5:37-8:33/km Z1-Z3)"
+    },
+    {
+      "repeat": 3,
+      "steps": [
+        {
+          "duration": 15,
+          "durationType": "time",
+          "targetType": "pace",
+          "pace": 260,
+          "paceType": "target",
+          "text": "15s fast burst (4:20/km)"
+        },
+        {
+          "duration": 20,
+          "durationType": "time",
+          "targetType": "pace",
+          "pace": null,
+          "paceMin": 320,
+          "paceMax": 410,
+          "paceType": "range",
+          "text": "20s easy recovery (5:20-6:50/km Z1)"
+        }
+      ]
+    },
+    {
+      "duration": 90,
+      "durationType": "time",
+      "targetType": "pace",
+      "pace": null,
+      "paceMin": 350,
+      "paceMax": 513,
+      "paceType": "range",
+      "text": "90s walking rest (5:50-8:33/km Z1)"
+    },
+    {
+      "repeat": 4,
+      "steps": [
+        {
+          "distance": 1000,
+          "durationType": "distance",
+          "targetType": "pace",
+          "pace": 290,
+          "paceType": "target",
+          "text": "1km at 4:50/km"
+        },
+        {
+          "distance": 200,
+          "durationType": "distance",
+          "targetType": "pace",
+          "pace": 260,
+          "paceType": "target",
+          "text": "200m at 4:20/km"
+        },
+        {
+          "duration": 120,
+          "durationType": "time",
+          "targetType": "pace",
+          "pace": null,
+          "paceMin": 350,
+          "paceMax": 440,
+          "paceType": "range",
+          "text": "120s walking rest (5:50-7:20/km Z1)"
+        }
+      ]
+    },
+    {
+      "distance": 2200,
+      "durationType": "distance",
+      "targetType": "pace",
+      "pace": null,
+      "paceMin": 260,
+      "paceMax": 440,
+      "paceType": "range",
+      "text": "2.2km cool down at conversational pace (4:20-7:20/km Z1-Z3)"
+    }
+  ]
+}
